@@ -1,18 +1,14 @@
-import io
 import os
 import tempfile
 
-import librosa
 import numpy as np
-import torchaudio
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import json
 
 from scipy.io import wavfile
 
 from .ia import run_model
-from .audio_processor import process_audio
+from .audio_processor import process_audio, remove_silence
 from .params_processor import process_params
 
 
@@ -27,6 +23,13 @@ def process_voice(request):
             f.seek(0)
 
         sr, waveform = wavfile.read(f.name)
+
+        if len(waveform.shape) == 2:
+            waveform = np.mean(waveform, axis=1)
+
+        # waveform = remove_silence(waveform, sr, vad_aggressiveness=3)
+
+        waveform = waveform / np.max(np.abs(waveform))
 
         chunks = process_audio(waveform, sr)
 
