@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
+    <script src="./script/component.js" type="module"></script>
+    <script src="./script/utils.js"></script>
+    <script src="./script/app.js"></script>
+    <title>Configurable Pink Trombone with AI</title>
+</head>
+<body>
+<div class="container">
+    <div class="controls">
+        <button id="start-recording" class="btn">Start Recording</button>
+        <button id="play-recording" class="btn" style="display:none;">Play Recording</button>
+        <audio id="playback" controls></audio>
+        <button id="send-recording" class="btn" style="display:none;">Send Recording</button>
+        <button id="play-in-pink-trombone" class="btn" style="display:none;">Play in Pink Trombone</button>
+    </div>
+    <div class="pink-trombone-container">
+        <pink-trombone></pink-trombone>
+    </div>
+</div>
+
+<script>
+    const pinkTromboneElement = document.querySelector("pink-trombone");
+
+    pinkTromboneElement.addEventListener("load", event => {
+        pinkTromboneElement.setAudioContext()
+            .then(pinkTrombone => {
+                pinkTromboneElement.enableUI();
+                pinkTromboneElement.startUI();
+                pinkTromboneElement.connect(pinkTromboneElement.audioContext.destination);
+                setcons();
+            });
+    });
+
+    async function setcons() {
+        // Ajustar esta función según tus necesidades
+        lipConstriction = pinkTromboneElement.newConstriction(43, 1.7);
+        await sleep(100)
+        tractConstriction = pinkTromboneElement.newConstriction(30, 2);
+        await sleep(100)
+        throatConstriction = pinkTromboneElement.newConstriction(12, 2);
+        await sleep(100)
+    }
+
+</script>
+</body>
+</html>
