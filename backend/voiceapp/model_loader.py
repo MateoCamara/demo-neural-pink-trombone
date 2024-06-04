@@ -5,10 +5,10 @@ import yaml
 from encodec import EncodecModel
 
 from .model_architectures.SynthModelOneDimensional import SynthStage1D
+from .model_architectures.betaModelWithSynthOneDimensional import BetaVAESynth1D
 
 
-def load_model(config):
-    return SynthStage1D(**config['model_params'], **config['exp_params'])
+
 
 
 def set_weights_to_model(model, state_dict_path, device='cpu'):
@@ -26,7 +26,7 @@ def _load_codec_model(device):
     return model
 
 
-class ModelLoader:
+class ModelLoaderEncodec:
     def __init__(self):
         self.model = None
         self.codec_model = None
@@ -41,13 +41,38 @@ class ModelLoader:
 
     def load_models(self):
         state_dict_path = os.path.join("models/encodec_dynamic_1.ckpt")
-        model = load_model(self.config).to(self.device)
+        model = self.load_model(self.config).to(self.device)
         self.model = set_weights_to_model(model, state_dict_path, device=self.device)
         self.codec_model = _load_codec_model(self.device)
 
         return self.model, self.codec_model
 
+    @staticmethod
+    def load_model(config):
+        return SynthStage1D(**config['model_params'], **config['exp_params'])
 
-model_loader = ModelLoader()
+class ModelLoaderVAE:
+    def __init__(self):
+        self.model = None
+        self.codec_model = None
+        self.device = 'cuda:0'
+        self.config_path = 'config_betaVAESynth_dynamic_1.yaml'
 
-model, model_encodec = model_loader.load_models()
+        with open(f'models/{self.config_path}', 'r') as file:
+            try:
+                self.config = yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                print(exc)
+
+    def load_models(self):
+        state_dict_path = os.path.join("models/betavae_dynamic_1.ckpt")
+        model = self.load_model(self.config).to(self.device)
+        self.model = set_weights_to_model(model, state_dict_path, device=self.device)
+        return self.model
+
+    @staticmethod
+    def load_model(config):
+        return BetaVAESynth1D(**config['model_params'], **config['exp_params'])
+
+# model_loader = ModelLoaderEncodec()
+model_loader = ModelLoaderVAE()

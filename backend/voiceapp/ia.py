@@ -1,11 +1,13 @@
 import librosa
 import numpy as np
 import torch
+import torchaudio
 from scipy.io.wavfile import write
 from scipy.signal import savgol_filter
 from tqdm import tqdm
 from scipy.signal import resample
 from .model_loader import model_loader
+from .utils import normalizar_mel_spec
 
 # cargar el archivo de audio
 
@@ -89,7 +91,7 @@ def save_params(params, output_path):
     np.save(output_path, params)
 
 
-def run_model(audio_chunk, sr, prev_embeddings=None):
+def run_model_encodec(audio_chunk, sr, prev_embeddings=None):
     model = model_loader.model
     model_encodec = model_loader.codec_model
     device = model_loader.device
@@ -143,8 +145,80 @@ def run_model(audio_chunk, sr, prev_embeddings=None):
 
     denorm_params = np.array(denorm_params).T.tolist()
 
-    filtered_params = []
-    for i in range(len(denorm_params)):
-        filtered_params.append(savgol_filter(denorm_params[i], window_length=32, polyorder=2).tolist())
-
     return denorm_params, last_embedding
+
+
+def run_model_vae(audio_chunk, sr, prev_mel=None):
+    model = model_loader.model
+    device = model_loader.device
+
+    audio_tensor = torch.as_tensor(audio_chunk).float().unsqueeze(0).unsqueeze(0).to('cpu')  # Add batch dimension
+    mel_spec = compute_mel_spectrogram(audio_tensor, sr, 8000, power=True)
+    mel_spec = normalizar_mel_spec(mel_spec).float().to(device)
+
+    pyin_f0 = compute_f0(audio_chunk, sr)[0]
+    try:
+        nanmean = np.nanmean(pyin_f0)
+    except:
+        nanmean = 100
+    pyin_f0 = np.nan_to_num(pyin_f0, nan=nanmean)
+
+    last_mel = mel_spec[:, :, :, -1].unsqueeze(-1)
+
+    pred_params = []
+    for index in tqdm(range(mel_spec.size()[-1])):
+        if index == 0:
+            if prev_mel is not None:
+                input = torch.cat([prev_mel, mel_spec[:, :, :, 0].unsqueeze(-1)], dim=-1)
+            else:
+                input = torch.cat([mel_spec[:, :, :, 0].unsqueeze(3)] * 2, dim=3)
+        else:
+            input = mel_spec[:, :, :, index - 1:index + 1]
+
+        input = torch.permute(input, (0, 1, 3, 2))[0]
+        input = input.to(device)
+
+        pred_params.append(model.forward(input, None)[-2].detach().cpu().numpy()[0])
+
+    denorm_params = []
+    for params, pyin in zip(pred_params, pyin_f0):
+        aux_denorm_params = denormalizar_params(params).tolist()
+        # add at the first position the f0
+        aux_denorm_params.insert(0, 1)  # voiceness
+        aux_denorm_params.insert(0, pyin)
+
+        denorm_params.append(aux_denorm_params)
+
+    denorm_params = np.array(denorm_params).T.tolist()
+
+    return denorm_params, last_mel
+
+
+def compute_mel_spectrogram(audio, sr, fmax, power=True):
+    """
+    Calcula el espectrograma MEL de un audio dado.
+    """
+    spec_transform = torchaudio.transforms.MelSpectrogram(
+        sample_rate=sr,
+        n_fft=2048,
+        win_length=2048,
+        hop_length=512,
+        f_min=0,
+        f_max=fmax,
+        n_mels=128,
+        window_fn=torch.hann_window,
+        power=2.0,
+        normalized=False,
+        center=True,
+        pad_mode='reflect',
+        mel_scale='htk'  # Ensure mel scale is 'htk' for compatibility
+    )
+
+    S = spec_transform(audio)
+
+    if power:
+        db_transform = torchaudio.transforms.AmplitudeToDB('power', top_db=80.)
+        S_dB = db_transform(S)
+        return S_dB
+    else:
+        return S

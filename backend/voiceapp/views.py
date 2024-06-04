@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from scipy.io import wavfile
 
-from .ia import run_model
+from .ia import run_model_encodec, run_model_vae
 from .audio_processor import process_audio, remove_silence
 from .params_processor import process_params
 
@@ -34,9 +34,10 @@ def process_voice(request):
         chunks = process_audio(waveform, sr)
 
         params = []
-        last_embedding = None
+        last = None
         for chunk in chunks:
-            computed_params, last_embedding = run_model(chunk, sr=sr, prev_embeddings=last_embedding)
+            # computed_params, last = run_model_encodec(chunk, sr=sr, prev_embeddings=last)
+            computed_params, last = run_model_vae(chunk, sr=sr, prev_mel=last)
             params.append(computed_params)
 
         final_params = process_params(params, len(chunks))
