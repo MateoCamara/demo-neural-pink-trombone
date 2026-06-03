@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: 'audio',
                     mimeType: 'audio/wav',
                     recorderType: StereoAudioRecorder,
-                    desiredSampRate: 48000 // Puedes ajustar la tasa de muestreo según tus necesidades
+                    desiredSampRate: 48000 // You can adjust the sample rate as needed
                 });
 
                 recorder.startRecording();
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isRecording = false;
                 startRecordingButton.textContent = 'Start Recording';
 
-                // Para verificar la descarga
+                // To verify the download
                 // const downloadLink = document.createElement('a');
                 // downloadLink.href = audioUrl;
                 // downloadLink.download = 'recording.wav';
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const constriction_diams = parameters.params[6];
         const throat_diams = parameters.params[7];
 
-        // Suponiendo que los parámetros incluyen frequency y otros necesarios para el pink-trombone
+        // Assuming the parameters include frequency and the others needed by pink-trombone
         pinkTromboneElement.dispatchEvent(new CustomEvent('produceSound', {
             bubbles: true,
             detail: {
