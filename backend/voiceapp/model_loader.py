@@ -30,7 +30,7 @@ class ModelLoaderEncodec:
     def __init__(self):
         self.model = None
         self.codec_model = None
-        self.device = 'cuda:0'
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         self.config_path = 'config_encodec_dynamic_1.yaml'
 
         with open(f'models/{self.config_path}', 'r') as file:
@@ -55,7 +55,7 @@ class ModelLoaderVAE:
     def __init__(self):
         self.model = None
         self.codec_model = None
-        self.device = 'cuda:0'
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         self.config_path = 'config_betaVAESynth_dynamic_1.yaml'
 
         with open(f'models/{self.config_path}', 'r') as file:
