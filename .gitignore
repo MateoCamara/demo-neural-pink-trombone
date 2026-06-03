@@ -1,2 +1,28 @@
+# IDE
 .idea/
-backend/models/encodec_dynamic_1.ckpt
+.vscode/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+db.sqlite3
+*.sqlite3
+/backend/media/
+
+# Node / frontend
+node_modules/
+
+# Model weights (large; not distributed — see README)
+*.ckpt
+
+# Stray local recordings
+backend/test.wav
+backend/test.webm
+
+# OS
+.DS_Store
+Thumbs.db
