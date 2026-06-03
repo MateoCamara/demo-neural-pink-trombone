@@ -7,6 +7,6 @@ class VoiceappConfig(AppConfig):
     name = 'voiceapp'
 
     def ready(self):
-        # Esto asegura que el modelo se carga cuando la aplicación está lista
+        # This makes sure the model is loaded once the application is ready
         model_loader.load_models()
         print("models loaded")

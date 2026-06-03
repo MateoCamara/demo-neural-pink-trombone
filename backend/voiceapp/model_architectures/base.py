@@ -1,3 +1,4 @@
+"""Abstract base class shared by the VAE model architectures."""
 from typing import List, Any, TypeVar
 from abc import abstractmethod
 import lightning as L

@@ -1,3 +1,4 @@
+"""HTTP endpoint that turns an uploaded voice recording into Pink Trombone parameters."""
 import os
 import tempfile
 

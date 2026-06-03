@@ -1,3 +1,4 @@
+"""1-D synthesis model that maps EnCodec embeddings to Pink Trombone parameters."""
 import torch
 from torch import nn
 from typing import List, TypeVar
@@ -8,7 +9,7 @@ Tensor = TypeVar('torch.tensor')
 
 
 class SynthStage1D(L.LightningModule):
-    num_iter = 0  # Variable estática global para llevar la cuenta de las iteraciones
+    num_iter = 0  # Global static variable to keep track of the iterations
 
     def __init__(self, codec_dim: int, time_dim: int, hidden_dims: List = None, output_dims: int = None,
                  beta_params: list = [], params_weight: int = 1, num_synth_params: int = 8, **kwargs):
@@ -67,7 +68,7 @@ class SynthStage1D(L.LightningModule):
         return [result, input, params, original_audio]
 
     def _calculate_output_size(self, model, input_tensor):
-        """Calcula el tamaño de salida de un modelo dado un tensor de entrada."""
+        """Compute the output size of a model for a given input tensor."""
         with torch.no_grad():
             for module in model:
                 input_tensor = module(input_tensor)

@@ -1,8 +1,10 @@
+"""Audio pre-processing helpers: fixed-length chunking and webrtcvad-based silence removal."""
 import numpy as np
 import webrtcvad
 
 
 def process_audio(waveform, sr):
+    """Split a waveform into 1-second chunks, zero-padding the last one when needed."""
     # waveform = librosa.resample(waveform, orig_sr=sr, target_sr=target_sr)
 
     chunks = []
@@ -10,8 +12,7 @@ def process_audio(waveform, sr):
     for i in range(0, len(waveform), sr):
         chunks.append(waveform[i:i + sr])
 
-    # es preciso asegurarse de que si no hay suficiente audio, se rellene con ceros
-
+    # Make sure that, when there is not enough audio, the chunk is zero-padded
     for i in range(len(chunks)):
         if len(chunks[i]) < sr:
             chunks[i] = np.concatenate((chunks[i], np.zeros(sr - len(chunks[i]))))
@@ -20,6 +21,7 @@ def process_audio(waveform, sr):
 
 
 def frame_generator(frame_duration_ms, audio, sample_rate):
+    """Yield successive fixed-duration frames from the audio signal."""
     n = int(sample_rate * frame_duration_ms / 1000)
     offset = 0
     while offset + n <= len(audio):
@@ -28,6 +30,7 @@ def frame_generator(frame_duration_ms, audio, sample_rate):
 
 
 def vad_collector(sample_rate, frame_duration_ms, padding_duration_ms, vad, frames):
+    """Collect the voiced frames detected by the VAD into a single signal."""
     num_padding_frames = int(padding_duration_ms / frame_duration_ms)
     ring_buffer = []
     triggered = False
@@ -57,6 +60,7 @@ def vad_collector(sample_rate, frame_duration_ms, padding_duration_ms, vad, fram
 
 
 def remove_silence(audio, sample_rate, vad_aggressiveness=3):
+    """Remove the silent segments from the audio using webrtcvad."""
     if audio.ndim > 1:
         audio = audio[:, 0]
 

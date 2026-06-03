@@ -1,3 +1,15 @@
+"""Neural inference that maps an input voice recording to Pink Trombone control parameters.
+
+Two pipelines are provided:
+
+* ``run_model_encodec`` -- encodes the audio with EnCodec and feeds the (interpolated)
+  embeddings to the synthesis model.
+* ``run_model_vae`` -- computes a mel spectrogram and feeds it to the beta-VAE synth model.
+
+Both return, per time step, the de-normalised synthesizer parameters (prefixed with the
+estimated f0 and a voicedness flag) together with the last frame, so consecutive audio
+chunks can be processed with continuity.
+"""
 import librosa
 import numpy as np
 import torch
@@ -9,7 +21,6 @@ from scipy.signal import resample
 from .model_loader import model_loader
 from .utils import normalizar_mel_spec
 
-# cargar el archivo de audio
 
 bounds = [(12, 29), (2.05, 3.5), (0.6, 1.7), (20.0, 40.0), (0.5, 2), (0.5, 2.0)]
 
@@ -19,7 +30,7 @@ def load_audio_file(audio_path, sr):
 
 
 def slerp(p0, p1, t):
-    """Interpola esféricamente entre dos puntos p0 y p1 usando el factor t."""
+    """Spherically interpolate (slerp) between two points p0 and p1 by factor t."""
     omega = np.arccos(np.clip(np.dot(p0 / np.linalg.norm(p0), p1 / np.linalg.norm(p1)), -1, 1))
     sin_omega = np.sin(omega)
     if sin_omega == 0:
@@ -30,63 +41,63 @@ def slerp(p0, p1, t):
 
 
 def interpolate_embeddings(embeddings, original_fps, target_fps=94):
-    """Interpola los embeddings al número de pasos por segundo objetivo."""
+    """Interpolate the embeddings to the target number of steps per second."""
     times_original = np.linspace(0, 1, original_fps)
     times_target = np.linspace(0, 1, target_fps)
 
-    # Inicializa la lista de embeddings interpolados
+    # Initialise the list of interpolated embeddings
     interpolated_embeddings = np.zeros((target_fps, embeddings.shape[1]))
 
-    # Calcula interpolaciones para cada paso de tiempo en el objetivo
+    # Compute interpolations for each target time step
     for i in range(target_fps):
-        # Encuentra los índices de los puntos originalmente más cercanos
+        # Find the indices of the nearest original points
         idx = np.searchsorted(times_original, times_target[i]) - 1
         idx_next = min(idx + 1, original_fps - 1)
 
-        # Calcula el factor de interpolación
+        # Compute the interpolation factor
         t = (times_target[i] - times_original[idx]) / (times_original[idx_next] - times_original[idx])
 
-        # Interpola esféricamente entre los dos puntos más cercanos
+        # Spherically interpolate between the two nearest points
         interpolated_embeddings[i] = slerp(embeddings[idx], embeddings[idx_next], t)
 
     return interpolated_embeddings
 
 
-# Calcular su frecuencia fundamental con pyin
+# Compute the fundamental frequency (f0) with pYIN
 def compute_f0(y, sr):
     return librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr)
 
 
-# forzar la f0 a 100 hz
+# Force f0 to a target value
 
 def force_f0(audio, target_f0, pyin_f0, sr):
-    if np.nanmean(pyin_f0) > 0:  # Evitar divisiones por cero si f0 es NaN
+    if np.nanmean(pyin_f0) > 0:  # Avoid division by zero if f0 is NaN
         stretch_factor = target_f0 / np.nanmean(pyin_f0)
     else:
         stretch_factor = 1.0
 
-    # Cambiar la frecuencia de la señal
+    # Shift the pitch of the signal
     return librosa.effects.pitch_shift(audio, sr=sr, n_steps=-12 * np.log2(stretch_factor))
 
 
-# pasarlo por la red neuronal
+# Run it through the neural network
 def predict_parameters(model, mel_spec):
     return model.forward(input=mel_spec, params=None)
 
 
-# desnormalizar los parámetros
+# De-normalise the parameters
 def denormalizar_params(params):
     for i, (low, high) in enumerate(bounds):
         params[i] = params[i] * (high - low) + low
     return params
 
 
-# guardar el audio
+# Save the audio
 def save_audio(audio, output_path, sr):
     write(output_path, sr, audio)
 
 
-# guardar los parámetros
+# Save the parameters
 def save_params(params, output_path):
     np.save(output_path, params)
 
@@ -119,7 +130,7 @@ def run_model_encodec(audio_chunk, sr, prev_embeddings=None):
 
     pred_params = []
     for index, (mel_time_instant, pyin_time_instant) in tqdm(enumerate(zip(embbeding_interpolated, pyin_f0))):
-        # input es igual al instante actual y al anterior
+        # The input is the current time step together with the previous one
         if index == 0:
             if prev_embeddings is not None:
                 input = torch.cat([prev_embeddings.unsqueeze(0), embbeding_interpolated[index, :].unsqueeze(0)],
@@ -195,9 +206,7 @@ def run_model_vae(audio_chunk, sr, prev_mel=None):
 
 
 def compute_mel_spectrogram(audio, sr, fmax, power=True):
-    """
-    Calcula el espectrograma MEL de un audio dado.
-    """
+    """Compute the mel spectrogram of the given audio."""
     spec_transform = torchaudio.transforms.MelSpectrogram(
         sample_rate=sr,
         n_fft=2048,

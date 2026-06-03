@@ -1,3 +1,4 @@
+"""Load the trained synthesis / beta-VAE models (and the EnCodec codec) from configs and checkpoints."""
 import os
 
 import torch
