@@ -1,0 +1,25 @@
+# Backend dependencies for the neural Pink Trombone demo.
+# Developed with Python 3.11 and Django 5.0; inference runs on PyTorch.
+#
+# The trained model weights (backend/models/*.ckpt) are NOT included in the
+# repository — see the README for where to obtain and place them.
+
+# Web framework
+django>=5.0,<5.1
+django-cors-headers
+
+# Deep learning / inference
+torch
+torchaudio
+lightning
+encodec
+
+# Audio & signal processing
+librosa
+scipy
+numpy
+webrtcvad
+
+# Utilities
+pyyaml
+tqdm
