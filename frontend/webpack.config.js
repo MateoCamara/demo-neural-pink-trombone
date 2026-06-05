@@ -3,6 +3,7 @@ const path = require('path');
 const whichFile = "component";
 
 module.exports = {
+    mode: 'production',
     entry: {
         app : {
             "component" : './script/component.js',
@@ -14,6 +15,7 @@ module.exports = {
     },
     output: {
         path: path.resolve(__dirname, 'build'),
+        globalObject: 'globalThis',
         filename : {
             "component" : 'pink-trombone.min.js',
             "pink-trombone" : 'pink-trombone-worklet-processor.min.js',
@@ -28,8 +30,8 @@ module.exports = {
             test: /\.js?$/,
             exclude: /node_modules/,
             loader: 'babel-loader',
-            query: {
-                presets: ['@babel/env']
+            options: {
+                presets: ['@babel/preset-env']
             }
         }]
     }
